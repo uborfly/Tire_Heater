@@ -1,82 +1,119 @@
-/*!
-    \file  main.c
-    \brief running led
+#include "lcd/lcd.h"
+#include "fatfs/tf_card.h"
+#include <string.h>
 
-    \version 2019-6-5, V1.0.0, firmware for GD32VF103
-*/
 
-/*
-    Copyright (c) 2019, GigaDevice Semiconductor Inc.
+unsigned char image[12800];
+FATFS fs;
 
-    Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-    1. Redistributions of source code must retain the above copyright notice, this
-       list of conditions and the following disclaimer.
-    2. Redistributions in binary form must reproduce the above copyright notice,
-       this list of conditions and the following disclaimer in the documentation
-       and/or other materials provided with the distribution.
-    3. Neither the name of the copyright holder nor the names of its contributors
-       may be used to endorse or promote products derived from this software without
-       specific prior written permission.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
-OF SUCH DAMAGE.
-*/
-
-#include "gd32vf103.h"
-#include "systick.h"
-#include <stdio.h>
-
-/* BUILTIN LED OF LONGAN BOARDS IS PIN PC13 */
-#define LED_PIN GPIO_PIN_13
-#define LED_GPIO_PORT GPIOC
-#define LED_GPIO_CLK RCU_GPIOC
-
-void longan_led_init()
+int _put_char(int ch)
 {
-    /* enable the led clock */
-    rcu_periph_clock_enable(LED_GPIO_CLK);
-    /* configure led GPIO port */
-    gpio_init(LED_GPIO_PORT, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, LED_PIN);
-
-    GPIO_BC(LED_GPIO_PORT) = LED_PIN;
+    usart_data_transmit(USART0, (uint8_t) ch );
+    while ( usart_flag_get(USART0, USART_FLAG_TBE) == RESET) {
+    }
+    return ch;
 }
 
-void longan_led_on()
+void init_uart0(void)
 {
-    GPIO_BOP(LED_GPIO_PORT) = LED_PIN;
+    /* enable GPIO clock */
+    rcu_periph_clock_enable(RCU_GPIOA);
+
+    /* enable USART clock */
+    rcu_periph_clock_enable(RCU_USART0);
+
+    /* connect port to USARTx_Tx */
+    gpio_init(GPIOA, GPIO_MODE_AF_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_9);
+    /* connect port to USARTx_Rx */
+    gpio_init(GPIOA, GPIO_MODE_IN_FLOATING, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+
+
+    /* USART configure */
+    usart_deinit(USART0);
+    usart_baudrate_set(USART0, 115200U);
+    usart_word_length_set(USART0, USART_WL_8BIT);
+    usart_stop_bit_set(USART0, USART_STB_1BIT);
+    usart_parity_config(USART0, USART_PM_NONE);
+    usart_hardware_flow_rts_config(USART0, USART_RTS_DISABLE);
+    usart_hardware_flow_cts_config(USART0, USART_CTS_DISABLE);
+    usart_receive_config(USART0, USART_RECEIVE_ENABLE);
+    usart_transmit_config(USART0, USART_TRANSMIT_ENABLE);
+    usart_enable(USART0);
+
+    usart_interrupt_enable(USART0, USART_INT_RBNE);
 }
 
-void longan_led_off()
-{
-    GPIO_BC(LED_GPIO_PORT) = LED_PIN;
-}
-/*!
-    \brief      main function
-    \param[in]  none
-    \param[out] none
-    \retval     none
-*/
+
+
 int main(void)
 {
-    longan_led_init();
+    uint8_t mount_is_ok = 1; /* 0: mount successful ; 1: mount failed */
+    FIL fil;
+    FRESULT fr;     /* FatFs return code */
+    UINT br;
 
-    while (1)
-    {
-        /* turn on builtin led */
-        longan_led_on();
-        delay_1ms(1000);
-        /* turn off uiltin led */
-        longan_led_off();
-        delay_1ms(1000);
+    rcu_periph_clock_enable(RCU_GPIOA);
+    rcu_periph_clock_enable(RCU_GPIOB);
+    rcu_periph_clock_enable(RCU_GPIOC);
+    gpio_init(GPIOC, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_13);
+    gpio_init(GPIOA, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_1 | GPIO_PIN_2);
+    gpio_init(GPIOB, GPIO_MODE_OUT_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_10);
+
+    gpio_bit_set(GPIOB, GPIO_PIN_10);
+
+    init_uart0();
+
+    Lcd_Init();
+    LCD_Clear(WHITE);
+    BACK_COLOR = WHITE;
+    setRotation(1);
+
+    LEDR(1);
+    LEDG(1);
+    LEDB(1);
+
+    fr = f_mount(&fs, "", 1);
+    if (fr == 0)
+        mount_is_ok = 0;
+    else
+        mount_is_ok = 1;
+
+    if (mount_is_ok == 0) {
+        while (1) {
+            fr = f_open(&fil, "logo.bin", FA_READ);
+            if (fr) {
+                printf("open error: %d!\n\r", (int)fr);
+                break;
+            } else {
+                LCD_Address_Set(0, 0, 239, 134);
+                while (1) {
+                    fr = f_read(&fil, image, sizeof(image), &br);
+                    if (br > 0) {
+                        for (int i = 0; i < br; i++) {
+                            LCD_WR_DATA8(image[i]);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                f_close(&fil);
+            }
+        }
+    } else {
+        LCD_ShowString(0,  0, (u8 *)("no card found!"), BLACK);
+        LCD_ShowString(0, 16, (u8 *)("no card found!"), BLUE);
+        LCD_ShowString(0, 32, (u8 *)("no card found!"), BRED);
+        LCD_ShowString(0, 48, (u8 *)("no card found!"), GBLUE);
+        LCD_ShowString(0, 64, (u8 *)("no card found!"), RED);
+    }
+    while (1) {
+        LEDR_TOG;
+        delay_1ms(200);
+        LEDG_TOG;
+        delay_1ms(200);
+        LEDB_TOG;
+        delay_1ms(200);
     }
 }
+
+
