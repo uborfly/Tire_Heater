@@ -12,9 +12,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "D:/Projects/Prj_PIO/scales/.pio/build/sipeed-longan-nano/firmware.elf",
-            "toolchainBinDir": "C:/Users/UBOFLY/.platformio/packages/toolchain-gd32v/bin",
-            "svdPath": "C:/Users/UBOFLY/.platformio/platforms/gd32v/misc/svd/GD32VF103.svd",
+            "executable": "e:/Projects/Prj_C/scales/.pio/build/sipeed-longan-nano/firmware.elf",
+            "toolchainBinDir": "C:/Users/asus/.platformio/packages/toolchain-gd32v/bin",
+            "svdPath": "C:/Users/asus/.platformio/platforms/gd32v/misc/svd/GD32VF103.svd",
             "preLaunchTask": {
                 "type": "PlatformIO",
                 "task": "Pre-Debug"
@@ -25,9 +25,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "D:/Projects/Prj_PIO/scales/.pio/build/sipeed-longan-nano/firmware.elf",
-            "toolchainBinDir": "C:/Users/UBOFLY/.platformio/packages/toolchain-gd32v/bin",
-            "svdPath": "C:/Users/UBOFLY/.platformio/platforms/gd32v/misc/svd/GD32VF103.svd",
+            "executable": "e:/Projects/Prj_C/scales/.pio/build/sipeed-longan-nano/firmware.elf",
+            "toolchainBinDir": "C:/Users/asus/.platformio/packages/toolchain-gd32v/bin",
+            "svdPath": "C:/Users/asus/.platformio/platforms/gd32v/misc/svd/GD32VF103.svd",
             "internalConsoleOptions": "openOnSessionStart"
         }
     ]
